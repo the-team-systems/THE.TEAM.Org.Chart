@@ -5449,11 +5449,14 @@ function saveEdit() {
         'Alex Hardee':    ['orange','orange-l'],
         'Accounts':       ['accounts','accounts-l'],
       };
-      const wasLight = cel.el.className.includes('-l');
       const newColors = divColorMap[newDivision] || ['grey','grey-l'];
+      // Use level to determine dark vs light: EVP/SVP (level 0-1) get dark, everyone else light
+      const isDark = p.level <= 1;
       // Strip existing colour classes
-      cel.el.className = cel.el.className.replace(/c-(blue|green|grey|orange|dark)(-l)?/g, '').trim();
-      cel.el.classList.add('c-' + (wasLight ? newColors[1] : newColors[0]));
+      cel.el.className = cel.el.className.replace(/c-(blue|green|grey|orange|dark|accounts)(-l)?/g, '').trim();
+      cel.el.classList.add('c-' + (isDark ? newColors[0] : newColors[1]));
+      // Update p.color to match
+      p.color = isDark ? newColors[0] : newColors[1];
       // Update modal bar colour
       document.getElementById('mbar').style.background = DIV_COLORS[newDivision] || '#ccc';
     }
@@ -6108,12 +6111,12 @@ document.getElementById('tmAddSave').addEventListener('click', () => {
   cardEls[newId] = { el, col, level, division };
 
   // Re-layout so person moves to correct cluster
-  relayoutDivision(p.division);
+  relayoutDivision(division);
 
   // Persist to localStorage
   try {
     const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
-    stored[newId] = { name, role, ea, manager: managerId, division, level, isNew: true };
+    stored[newId] = { name, role, ea, manager: managerId, division, level, tags: addedTags, isNew: true };
     saveEdits(stored);
   } catch(e) {}
 
