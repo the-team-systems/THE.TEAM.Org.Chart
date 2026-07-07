@@ -4449,8 +4449,8 @@ const rawIds = new Set(RAW.map(r => r[0]));
 const seenIds = new Set();
 const dedupedPeople = [];
 people.forEach(p => {
-  // Only keep people from the original RAW data (no new_ ghost entries)
-  if (rawIds.has(p.id) && !seenIds.has(p.id)) {
+  // Keep RAW people + admin-added people (new_ prefix) — filter only true duplicates
+  if ((rawIds.has(p.id) || p.id.startsWith('new_')) && !seenIds.has(p.id)) {
     seenIds.add(p.id);
     dedupedPeople.push(p);
   }
