@@ -4024,6 +4024,8 @@ async function saveToSupabase(data) {
 }
 
 function saveEdits(data) {
+  Object.assign(editsCache, data); // keep in-memory cache current
+  editsCache = data; // full replace to handle deletions
   try { localStorage.setItem('wm_edits', JSON.stringify(data)); } catch(e) {}
   saveToSupabase(data);
 }
@@ -4495,6 +4497,8 @@ Object.entries(cardEls).forEach(([id, cel]) => {
 // children's row. All children drop vertically from that shared bus.
 // This means lines NEVER overlap accidentally — siblings share a bus, not separate crossbars.
 const connectorMeta = [];
+// In-memory edits cache — always current, populated from Supabase on load
+let editsCache = {};
 // Store draggable bus Y offsets: key = "parentId:childLevel" -> fraction (0-1) of gap
 const busOffsets = {};
 function busKey(parentId, cLv) { return parentId + ':' + cLv; }
@@ -5480,7 +5484,7 @@ function saveEdit() {
 
   // Persist to localStorage
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     stored[editingId] = { name: p.name, role: p.role, ea: p.ea, manager: p.manager, division: p.division, level: p.level, tags: p.tags };
     saveEdits(stored);
   } catch(e) {}
@@ -5518,6 +5522,7 @@ async function loadEdits() {
   } catch(e2) {}
   try {
     const stored = await getEdits();
+    Object.assign(editsCache, stored); // keep in-memory cache current
     // Restore bus offsets
     if (stored.__busOffsets) Object.assign(busOffsets, stored.__busOffsets);
     // Source data version — bump this whenever structural changes are made
@@ -5817,7 +5822,7 @@ function applySingleReassign(id, newMgrId) {
 
   // Persist
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     if (!stored[id]) stored[id] = {};
     stored[id].manager = p.manager;
     saveEdits(stored);
@@ -5867,7 +5872,7 @@ tmDivFilter.addEventListener('change', renderTmTable);
 document.getElementById('tmResetLayout').addEventListener('click', () => {
   if (!confirm('Reset all saved positions and line adjustments?\nName/role/EA edits and reporting lines will be kept.')) return;
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     delete stored.__busOffsets;
     Object.keys(stored).forEach(id => {
       if (stored[id] && typeof stored[id] === 'object') delete stored[id].col;
@@ -5890,7 +5895,7 @@ document.getElementById('tmResetLayout').addEventListener('click', () => {
 document.getElementById('tmResetLayout').addEventListener('click', () => {
   if (!confirm('Reset all saved positions and line adjustments? Your name/role/EA edits and reporting lines will be kept.')) return;
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     // Remove col positions and bus offsets, keep everything else
     delete stored.__busOffsets;
     Object.keys(stored).forEach(id => {
@@ -5959,7 +5964,7 @@ function removePerson(id) {
 
   // Persist removal to localStorage
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     stored[id] = { _removed: true };
     saveEdits(stored);
   } catch(e) {}
@@ -6138,12 +6143,17 @@ document.getElementById('tmAddSave').addEventListener('click', () => {
   // Re-layout so person moves to correct cluster
   relayoutDivision(division);
 
-  // Persist to localStorage
-  try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+  // Persist — fetch latest from Supabase first so we don't overwrite other edits
+  getEdits().then(stored => {
     stored[newId] = { name, role, ea, manager: managerId, division, level, tags: addedTags, isNew: true };
     saveEdits(stored);
-  } catch(e) {}
+  }).catch(() => {
+    try {
+      const stored = Object.assign({}, editsCache);
+      stored[newId] = { name, role, ea, manager: managerId, division, level, tags: addedTags, isNew: true };
+      saveEdits(stored);
+    } catch(e) {}
+  });
 
   // Success
   document.getElementById('tmAddMsg').style.color = 'var(--green)';
@@ -6162,7 +6172,7 @@ document.getElementById('tmAddSave').addEventListener('click', () => {
 // Also create new people from localStorage on load
 (function loadNewPeople() {
   try {
-    const stored = JSON.parse(localStorage.getItem('wm_edits') || '{}');
+    const stored = Object.assign({}, editsCache);
     Object.entries(stored).forEach(([id, edits]) => {
       if (!edits.isNew) return;
       if (byId[id]) return; // already loaded
