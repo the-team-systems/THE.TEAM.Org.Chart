@@ -5693,6 +5693,9 @@ function showAdminDialog(onSuccess) {
 
 // ── TEAM MANAGER PANEL ──
 const tmOverlay  = document.getElementById('tmOverlay');
+// Clear pre-baked manage teams table from browser Save As
+const tmTableBody = document.getElementById('tmTableBody');
+if (tmTableBody) tmTableBody.innerHTML = '';
 const tmBody     = document.getElementById('tmBody');
 const tmSearch   = document.getElementById('tmSearch');
 const tmDivFilter= document.getElementById('tmDivFilter');
@@ -5822,7 +5825,8 @@ function applySingleReassign(id, newMgrId) {
   const p = byId[id];
   if (!p) return;
   const oldMgrId = p.manager;
-  if (newMgrId === oldMgrId) return;
+  console.log(`🔄 Reassigning ${p.name}: ${oldMgrId} → ${newMgrId}`);
+  if (newMgrId === oldMgrId) { console.log('  No change'); return; }
 
   p.manager = newMgrId || null;
 
