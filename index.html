@@ -5534,7 +5534,7 @@ async function loadEdits() {
     if (stored.__busOffsets) Object.assign(busOffsets, stored.__busOffsets);
     // Source data version — bump this whenever structural changes are made
     // (division splits, manager reassignments in RAW). Clears stale structural edits.
-    const SOURCE_VERSION = '2025-supabase-baked-v1';;
+    const SOURCE_VERSION = '2025-tags-dedup-fix-v2';
     const savedVersion = stored.__version__;
     const structureChanged = savedVersion !== SOURCE_VERSION;
 
@@ -5597,7 +5597,8 @@ async function loadEdits() {
         if (edits.ea)   keep.ea   = edits.ea;
         if (Object.keys(keep).length) clean[id] = keep;
       });
-      saveEdits(clean);
+      // Only update localStorage — don't overwrite Supabase with stripped data
+      try { localStorage.setItem('wm_edits', JSON.stringify(clean)); } catch(e) {}
     }
   } catch(e) {}
 }
