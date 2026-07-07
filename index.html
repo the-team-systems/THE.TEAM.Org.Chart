@@ -3999,18 +3999,24 @@ async function loadFromSupabase() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/org_edits?id=eq.main&select=data`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
-    if (!res.ok) return null;
+    if (!res.ok) { console.warn('Supabase fetch failed:', res.status); return null; }
     const rows = await res.json();
     if (rows && rows.length > 0 && rows[0].data && Object.keys(rows[0].data).length > 0) {
+      const keys = Object.keys(rows[0].data);
+      const newPeople = keys.filter(k => k.startsWith('new_'));
+      console.log(`✓ Supabase loaded: ${keys.length} entries, ${newPeople.length} new people:`, newPeople);
       return rows[0].data;
     }
+    console.warn('Supabase returned empty data');
   } catch(e) { console.warn('Supabase load failed:', e); }
   return null;
 }
 
 async function saveToSupabase(data) {
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/org_edits?id=eq.main`, {
+    const newPeople = Object.keys(data).filter(k => k.startsWith('new_'));
+    console.log(`💾 Saving to Supabase: ${Object.keys(data).length} entries, new people:`, newPeople);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/org_edits?id=eq.main`, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -4020,6 +4026,7 @@ async function saveToSupabase(data) {
       },
       body: JSON.stringify({ data, updated_at: new Date().toISOString() })
     });
+    console.log(`✓ Supabase save status: ${res.status}`);
   } catch(e) { console.warn('Supabase save failed:', e); }
 }
 
@@ -5535,6 +5542,7 @@ async function loadEdits() {
       if (id === '__version__') return;
       if (edits.isNew) {
         // New person added via admin — recreate them from Supabase data
+        console.log(`👤 Recreating new person from Supabase: ${id}`, edits.name);
         if (!byId[id]) {
           const divColors = { 'Tom Schroeder':['blue','blue-l'], 'James Whitting':['green','green-l'], 'Dave Hallybone':['grey','grey-l'], 'Alex Hardee':['orange','orange-l'], 'Accounts':['accounts','accounts-l'] };
           const lv  = edits.level ?? 4;
