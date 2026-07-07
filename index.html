@@ -4118,8 +4118,8 @@ const RAW = [
 ['asl','Adele Slater','SVP','jw','Jack Sanders','James Whitting','green','SVP'],
 ['acl','Adam Clements','Senior Manager - Tour Marketing','asl','Sam Alpert','James Whitting','green-l','Senior Manager|Tour Marketing'],
 ['cbu','Clementine Bunel','Director','asl','Jack Sanders','James Whitting','green-l','Director|Agent'],
-['lfl','Laura Flynn','Senior Manager - Tour Marketing','acl','Sam Alpert','James Whitting','green-l','Senior Manager|Tour Marketing'],
-['rlo','Rebecca Lourie','Senior Manager - Tour Marketing','acl','Sam Alpert','James Whitting','green-l','Senior Manager|Tour Marketing'],
+['lfl','Laura Flynn','Senior Coordinator - Tour Marketing','acl','Sam Alpert','James Whitting','green-l','Senior Coordinator|Tour Marketing'],
+['rlo','Rebecca Lourie','Senior Coordinator - Tour Marketing','acl','Sam Alpert','James Whitting','green-l','Senior Coordinator|Tour Marketing'],
 ['jali','Joseph Glickman Ali','Coordinator','cbu','Clementine Bunel','James Whitting','green-l','Coordinator'],
 ['eas','Eleanor Ashley','Coordinator','asl','Adele Slater','James Whitting','green-l','Coordinator'],
 ['jspe','Jamie Spencer','Coordinator','asl','Adele Slater','James Whitting','green-l','Coordinator'],
@@ -5528,7 +5528,20 @@ async function loadEdits() {
 
     Object.entries(stored).forEach(([id, edits]) => {
       if (id === '__version__') return;
-      if (edits.isNew) return; // handled by loadNewPeople
+      if (edits.isNew) {
+        // New person added via admin — recreate them from Supabase data
+        if (!byId[id]) {
+          const divColors = { 'Tom Schroeder':['blue','blue-l'], 'James Whitting':['green','green-l'], 'Dave Hallybone':['grey','grey-l'], 'Alex Hardee':['orange','orange-l'], 'Accounts':['accounts','accounts-l'] };
+          const lv  = edits.level ?? 4;
+          const div = edits.division || 'Tom Schroeder';
+          const col = divColors[div] || ['grey','grey-l'];
+          const colorClass = lv <= 1 ? col[0] : col[1];
+          const p = { id, name: edits.name||'TBC', role: edits.role||'', manager: edits.manager||null, ea: edits.ea||'—', division: div, color: colorClass, level: lv, tags: edits.tags||'' };
+          byId[id] = p;
+          people.push(p);
+        }
+        return;
+      }
       if (edits._removed) {
         // Person was removed — delete from data so they don't render
         const p = byId[id];
