@@ -4719,6 +4719,7 @@ function renderAllConnectors() {
 
   // Load Supabase data and apply to people array BEFORE rendering
   await loadEdits();
+  loadNewPeople(); // load new people AFTER Supabase data is in editsCache
 
   // Re-run layout with correct data
   let cursor2 = 0;
@@ -5537,6 +5538,7 @@ async function loadEdits() {
     const SOURCE_VERSION = '2025-tags-dedup-fix-v2';
     const savedVersion = stored.__version__;
     const structureChanged = savedVersion !== SOURCE_VERSION;
+    console.log(`📋 Version check: saved="${savedVersion}" current="${SOURCE_VERSION}" changed=${structureChanged}`);
 
     Object.entries(stored).forEach(([id, edits]) => {
       if (id === '__version__') return;
@@ -5597,6 +5599,7 @@ async function loadEdits() {
         if (edits.ea)   keep.ea   = edits.ea;
         if (Object.keys(keep).length) clean[id] = keep;
       });
+      console.warn(`⚠️ Structure changed cleanup: keeping ${Object.keys(clean).length} entries`);
       // Only update localStorage — don't overwrite Supabase with stripped data
       try { localStorage.setItem('wm_edits', JSON.stringify(clean)); } catch(e) {}
     }
@@ -6183,7 +6186,7 @@ document.getElementById('tmAddSave').addEventListener('click', () => {
 });
 
 // Also create new people from localStorage on load
-(function loadNewPeople() {
+function loadNewPeople() {
   try {
     const stored = Object.assign({}, editsCache);
     Object.entries(stored).forEach(([id, edits]) => {
@@ -6199,7 +6202,7 @@ document.getElementById('tmAddSave').addEventListener('click', () => {
       people.push(p);
     });
   } catch(e) {}
-})();
+}
 </script>
 
 
